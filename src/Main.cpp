@@ -10,18 +10,25 @@ unsigned long totalPulses = 0;
 unsigned long last_fired;
 unsigned long pulse_period=10000;
 
+const byte pin_laser = 9;
+const byte pin_relay = 3;
+const byte pin_speaker = 8;
+
 void listen_to_serial();
 void fire_pulse();
-
+void alarm();
+void blocking_tone(byte pin, unsigned int frequency, unsigned long duration);
 
 void setup()
 {
     //Set Pin mode
-    pinMode(12,OUTPUT);
-    digitalWrite(12,LOW);
+    pinMode(pin_laser, OUTPUT);
+    digitalWrite(pin_laser, LOW);
 
-    //Initialize time keeping
-    last_fired = millis();
+    pinMode(pin_relay, OUTPUT);
+    digitalWrite(pin_relay, LOW);
+
+    pinMode(pin_speaker,OUTPUT);
 
     //Serial Communication
     Serial.begin(9600);
@@ -74,6 +81,7 @@ void listen_to_serial()
                 Serial.print(",");
                 Serial.println(frequency,1);
 
+                alarm();
                 firedPulses = 0;
                 laser_on = true;
             }
@@ -82,6 +90,21 @@ void listen_to_serial()
             {
                 laser_on = false;
                 Serial.println("#pause");
+            }
+
+            
+            if(strncmp(commandBuffer, "kill_power", 10) == 0)
+            {
+                laser_on = false;
+                digitalWrite(pin_relay, HIGH);
+                Serial.println("#power killed");
+            }
+
+            if(strncmp(commandBuffer, "restore_power", 13) == 0)
+            {
+                laser_on = false;
+                digitalWrite(pin_relay, LOW);
+                Serial.println("#power restored");
             }
 
             if(strncmp(commandBuffer, "stop", 4) == 0)
@@ -94,6 +117,7 @@ void listen_to_serial()
 
             if(strncmp(commandBuffer, "cont", 4) == 0)
             {
+                alarm();
                 laser_on = true;
                 Serial.println("#cont");
             }
@@ -119,7 +143,22 @@ void listen_to_serial()
 
 void fire_pulse()
 {
-    digitalWrite(12, HIGH);
+    digitalWrite(9, HIGH);
     delayMicroseconds(100);
-    digitalWrite(12, LOW);
+    digitalWrite(9, LOW);
+}
+
+void blocking_tone(byte pin, unsigned int frequency, unsigned long duration)
+{
+    tone(pin, frequency, duration);
+    delay(duration);
+}
+
+void alarm()
+{
+    blocking_tone(pin_speaker, 500, 500);
+    delay(250);
+    blocking_tone(pin_speaker, 500, 500);
+    delay(250);
+    blocking_tone(pin_speaker, 500, 500);
 }
